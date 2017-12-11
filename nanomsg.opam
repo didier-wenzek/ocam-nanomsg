@@ -1,0 +1,17 @@
+opam-version: "1.2"
+version: "0.1"
+name: "nanomsg"
+maintainer: "Didier Wenzek <didier.wenzek@acidalie.com>"
+authors: ["Didier Wenzek <didier.wenzek@acidalie.com>"]
+homepage: "https://github.com/didier-wenzek/ocaml-nanomsg"
+bug-reports: "https://github.com/didier-wenzek/ocaml-nanomsg/issues"
+dev-repo: "https://github.com/didier-wenzek/ocaml-nanomsg.git"
+license: "MIT"
+build: [ ["jbuilder" "build" "-p" "nanomsg" "." "-j" jobs "@install"] ]
+build-test: [ "jbuilder" "runtest" "-p" name ]
+depends: [
+  "jbuilder" {build}
+  "lwt"
+]
+depexts: [
+]

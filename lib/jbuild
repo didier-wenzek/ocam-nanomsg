@@ -1,0 +1,8 @@
+(jbuild_version 1)
+
+(library
+ ((name nanomsg)
+  (public_name nanomsg)
+  (libraries (lwt.unix))
+  (c_names (ocaml_nanomsg))
+  (c_library_flags (-lnanomsg))))
