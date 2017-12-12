@@ -1,23 +1,31 @@
+(** The type of a socket *)
 type socket
+
+(** The type of a socket domain *)
 type domain = AF_SP | AF_SP_RAW
+
+(** The type of protocols which define the behavior of a socket *)
 type protocol = Pair | Pub | Sub | Req | Rep | Push | Pull | Surveyor | Respondent | Bus
+
 type address = string
 type endpoint
+
+(** A value of type ['a sockopt] names an option with value of type ['a]. *)
 type 'a sockopt
 
-(* Creates a socket with specified domain and protocol
+(** Creates a socket with specified domain and protocol
 
-  Default domain is AF_SP.
+    The default domain is AF_SP.
 *)
 val socket : ?domain:domain -> protocol -> socket
 
-(* Adds a local endpoint to the socket. *)
+(** Adds a local endpoint to the socket. *)
 val bind : socket -> address -> endpoint
 
-(* Adds a remote endpoint to the socket. *)
+(** Adds a remote endpoint to the socket. *)
 val connect : socket -> address -> endpoint
 
-(* Options.
+(** Options.
 
   No timeout option is provided:
   all send/recv operations are performed in non-blocking mode and use the NN_DONTWAIT flag.
@@ -40,7 +48,7 @@ val surveyor_deadline : int sockopt
 val getsockopt : socket -> 'a sockopt -> 'a
 val setsockopt : socket -> 'a sockopt -> 'a -> unit
 
-(* Sends a message to the socket.
+(** Sends a message to the socket.
 
    Which of the peers the message will be sent to is determined by the particular socket type.
 
@@ -50,10 +58,10 @@ val setsockopt : socket -> 'a sockopt -> 'a -> unit
 *)
 val send : socket -> string -> unit Lwt.t
 
-(* Receives a message from the socket. *)
+(** Receives a message from the socket. *)
 val recv : socket -> string Lwt.t
 
-(* Removes an endpoint from a socket.
+(** Removes an endpoint from a socket.
 
   [shutdown ()] returns immediately, however,
   the library will try to deliver any outstanding outbound messages to the endpoint
@@ -61,18 +69,18 @@ val recv : socket -> string Lwt.t
 *)
 val shutdown : endpoint -> unit
 
-(* Closes the socket.
+(** Closes the socket.
  
   Any buffered inbound messages that were not yet received by the application will be discarded.
   The library will try to deliver any outstanding outbound messages for the time specified by NN_LINGER socket option.
 *)
 val close : socket -> unit Lwt.t
 
-(* Informs all the open sockets that process termination is underway. *)
+(** Informs all the open sockets that process termination is underway. *)
 val term : unit -> unit
 
-(* Subcribes the socket to all messages published with the given prefix. *)
+(** Subcribes the socket to all messages published with the given prefix. *)
 val subscribe : socket -> string -> unit
 
-(* Unsubcribes the socket to messages published with the given prefix. *)
+(** Unsubcribes the socket to messages published with the given prefix. *)
 val unsubscribe : socket -> string -> unit
