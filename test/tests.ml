@@ -17,12 +17,20 @@ let () =
   let producer = Nanomsg.socket Nanomsg.Push in
   let consumer = Nanomsg.socket Nanomsg.Pull in
 
+(*
   let _ = Nanomsg.bind producer "inproc://foo" in
   let _ = Nanomsg.connect consumer "inproc://foo" in
+*)
 (*
   let _ = Nanomsg.bind producer "ipc:///tmp/foo" in
   let _ = Nanomsg.connect consumer "ipc:///tmp/foo" in
 *)
+(*
+  let _ = Nanomsg.connect producer "tcp://127.0.0.1:5560" in
+  let _ = Nanomsg.bind consumer "tcp://127.0.0.1:5560" in
+*)
+  let _ = Nanomsg.bind producer "ipc:///tmp/foo" in
+  let _ = Nanomsg.connect consumer "ipc:///tmp/foo" in
 
   let msg_list = ["foo"; "bar"; "xoxox"] in
 
