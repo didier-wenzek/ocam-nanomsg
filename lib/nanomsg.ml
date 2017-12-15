@@ -54,20 +54,30 @@ external nn_getsockopt_fd : socket_id -> nn_level -> nn_sockopt -> Unix.file_des
 external nn_setsockopt_int : socket_id -> nn_level -> nn_sockopt -> int -> unit = "ocaml_nanomsg_setsockopt_int"
 external nn_setsockopt_str : socket_id -> nn_level -> nn_sockopt -> string -> unit = "ocaml_nanomsg_setsockopt_str"
 
+let aborted_fd unix_fd op message =
+  let fd =
+    Lwt_unix.of_unix_file_descr ~set_flags:false ~blocking:true unix_fd
+  in
+  Lwt_unix.abort fd (Unix.Unix_error (Unix.EINVAL,op,message));
+  fd
+
+let receive_only_fd = aborted_fd Unix.stdin "Nanomsg.send" "receive-only socket"
+let send_only_fd = aborted_fd Unix.stdout "Nanomsg.recv" "send-only socket"
+
 (* Wraps the RECVFD or SNDFD file descriptor of socket into a Lwt_unix.file_descr
 
    In case this file descriptor doesn't exist
    (because the socket is either not readable or not writable),
-   a dummy file descriptor is used
-   (this is harmless because it will not be used).
+   an aborted lwt file descriptor is returned
+   (so an exception will be raised if used by Lwt_unix.wrap_syscall).
 *)
 let get_socket_fd socket_id io_event =
   let sockopt, default_fd = match io_event with
-    | Lwt_unix.Read -> (NN_RCVFD, Lwt_unix.stdin)
-    | Lwt_unix.Write -> (NN_SNDFD, Lwt_unix.stdout)
+    | Lwt_unix.Read -> (NN_RCVFD, send_only_fd)
+    | Lwt_unix.Write -> (NN_SNDFD, receive_only_fd)
   in try
     let unix_fd = nn_getsockopt_fd socket_id NN_SOL_SOCKET sockopt in
-    Lwt_unix.of_unix_file_descr ~blocking:false unix_fd
+    Lwt_unix.of_unix_file_descr ~set_flags:false ~blocking:false unix_fd
   with Unix.Unix_error (Unix.ENOPROTOOPT,_,_) -> default_fd
 
 external nn_socket : domain -> protocol -> socket_id = "ocaml_nanomsg_socket"
