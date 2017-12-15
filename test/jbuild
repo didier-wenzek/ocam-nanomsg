@@ -2,7 +2,7 @@
 
 (executables
  ((names (tests))
-  (libraries (nanomsg))))
+  (libraries (oUnit nanomsg))))
 
 (alias
  ((name    runtest)
