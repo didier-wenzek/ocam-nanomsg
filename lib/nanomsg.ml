@@ -96,29 +96,13 @@ let setsockopt : type a. socket -> a sockopt -> a -> unit = fun (Socket(socket,_
 
 external nn_send : socket_id -> string -> unit = "ocaml_nanomsg_send"
 let send (Socket(socket, _, send_fd)) msg = 
-  let action () =
-    try nn_send socket msg;                 None
-    with
-    | Unix.Unix_error(Unix.EAGAIN, _, _) -> raise Lwt_unix.Retry_write
-    | error                              -> Some error
-  in
+  let action () = nn_send socket msg in
   Lwt_unix.wrap_syscall Lwt_unix.Write send_fd action
-  >>= function
-  | None -> return_unit
-  | Some error -> fail error
 
 external nn_recv : socket_id -> string = "ocaml_nanomsg_recv"
 let recv (Socket(socket, recv_fd, _)) =
-  let action () =
-    try (None, nn_recv socket)
-    with
-    | Unix.Unix_error(Unix.EAGAIN, _, _) -> raise Lwt_unix.Retry_read
-    | error                              -> (Some error, "")
-  in
+  let action () = nn_recv socket in
   Lwt_unix.wrap_syscall Lwt_unix.Read recv_fd action
-  >>= function
-  | (None, msg) -> return msg
-  | (Some error, _) -> fail error
 
 external nn_close_job : socket_id -> unit Lwt_unix.job = "ocaml_nanomsg_close_job"
 let close (Socket(socket,_,_)) = Lwt_unix.run_job (nn_close_job socket)
