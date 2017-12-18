@@ -40,6 +40,10 @@ let test_push_pull channel messages =
     let _ = Nanomsg.bind producer channel in
     let _ = Nanomsg.connect consumer channel in
     exchange producer consumer messages
+    >>= fun () ->
+    Nanomsg.close producer
+    >>= fun () ->
+    Nanomsg.close consumer
   in
   test_lwt name test
 

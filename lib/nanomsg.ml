@@ -115,7 +115,8 @@ let recv (Socket(socket, recv_fd, _)) =
   Lwt_unix.wrap_syscall Lwt_unix.Read recv_fd action
 
 external nn_close_job : socket_id -> unit Lwt_unix.job = "ocaml_nanomsg_close_job"
-let close (Socket(socket,_,_)) = Lwt_unix.run_job (nn_close_job socket)
+let async_method = Lwt_unix.Async_detach
+let close (Socket(socket,_,_)) = Lwt_unix.run_job ~async_method (nn_close_job socket)
 
 external term : unit -> unit = "ocaml_nanomsg_term"
 

@@ -208,9 +208,12 @@ struct job_close {
   int error;
 };
 
+#include <stdio.h>
+
 static void worker_close(struct job_close* job)
 {
-  job->error = nn_close(job->socket);
+  if (nn_close(job->socket)) job->error = errno;
+  else                       job->error = 0;
 }
 
 static value result_close(struct job_close* job)
@@ -221,7 +224,7 @@ static value result_close(struct job_close* job)
   lwt_unix_free_job(&job->job);
 
   if (error) {
-    unix_error(errno, "Nanomsg.close", Nothing);
+    unix_error(error, "Nanomsg.close", Nothing);
   } else {
     CAMLreturn(Val_unit);
   }
