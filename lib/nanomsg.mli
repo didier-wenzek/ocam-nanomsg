@@ -10,6 +10,9 @@ type protocol = Pair | Pub | Sub | Req | Rep | Push | Pull | Surveyor | Responde
 type address = string
 type endpoint
 
+(** String type based on Bigarray *)
+type payload = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
+
 (** A value of type ['a sockopt] names an option with value of type ['a]. *)
 type 'a sockopt
 
@@ -56,10 +59,10 @@ val setsockopt : socket -> 'a sockopt -> 'a -> unit
    the size of the send buffer (sndbuf option) must be large enough
    to contain the message otherwise the operation blocks !
 *)
-val send : socket -> string -> unit Lwt.t
+val send : socket -> payload -> unit Lwt.t
 
 (** Receives a message from the socket. *)
-val recv : socket -> string Lwt.t
+val recv : socket -> payload Lwt.t
 
 (** Removes an endpoint from a socket.
 
@@ -84,3 +87,9 @@ val subscribe : socket -> string -> unit
 
 (** Unsubcribes the socket to messages published with the given prefix. *)
 val unsubscribe : socket -> string -> unit
+
+(** Make a bigstring payload of a string. *)
+val payload_of_string: string -> payload
+
+(** Make a strinf of a bigstring payload. *)
+val string_of_payload: payload -> string

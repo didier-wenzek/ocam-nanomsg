@@ -4,6 +4,7 @@
 #include <caml/callback.h>
 #include <caml/fail.h>
 #include <caml/alloc.h>
+#include <caml/bigarray.h>
 #include <lwt_unix.h>
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
@@ -246,8 +247,8 @@ value ocaml_nanomsg_send(value caml_socket, value caml_msg)
   CAMLparam2(caml_socket, caml_msg);
 
   int socket = Int_val(caml_socket);
-  void* buf = String_val(caml_msg);
-  size_t len = caml_string_length(caml_msg);
+  void* buf = Caml_ba_data_val(caml_msg);
+  size_t len = Caml_ba_array_val(caml_msg)->dim[0];
 
   int sent = nn_send(socket, buf, len, NN_DONTWAIT);
   
@@ -271,11 +272,45 @@ value ocaml_nanomsg_recv(value caml_socket)
   if (len == -1) {
     unix_error(errno, "Nanomsg.recv", Nothing);
   } else {
-    caml_msg = caml_alloc_string(len);
-    memcpy(String_val(caml_msg), buf, len);
+    // we must copy the buffer since nanomsg.nn_free is not equivalent to free.
+    long dims[1];
+    dims[0] = len;
+    caml_msg = caml_ba_alloc(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, buf, dims);
 
-    nn_freemsg(buf);
     CAMLreturn(caml_msg);
   }
 }
 
+#include <stdio.h>
+
+extern CAMLprim
+value ocaml_payload_of_string(value caml_str)
+{
+  CAMLparam1(caml_str);
+  CAMLlocal1(caml_bigstr);
+
+  size_t len = caml_string_length(caml_str);
+  void *str = malloc(len);
+  memcpy(str, String_val(caml_str), len);
+
+  long dims[1];
+  dims[0] = len;
+  caml_bigstr = caml_ba_alloc(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, str, dims);
+
+  CAMLreturn(caml_bigstr);
+}
+
+extern CAMLprim
+value ocaml_string_of_payload(value caml_bigstr)
+{
+  CAMLparam1(caml_bigstr);
+  CAMLlocal1(caml_str);
+
+  size_t len = Caml_ba_array_val(caml_bigstr)->dim[0];
+  void* str = Caml_ba_data_val(caml_bigstr);
+
+  caml_str = caml_alloc_string(len);
+  memcpy(String_val(caml_str), str, len);
+
+  CAMLreturn(caml_str);
+}

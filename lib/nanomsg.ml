@@ -14,6 +14,7 @@ type socket = Socket of socket_id * Lwt_unix.file_descr * Lwt_unix.file_descr
 type address = string
 type endpoint_id = int
 type endpoint = Endpoint of socket_id * endpoint_id
+type payload = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
 
 type domain = AF_SP | AF_SP_RAW
 type protocol = Pair | Pub | Sub | Req | Rep | Push | Pull | Surveyor | Respondent | Bus
@@ -104,12 +105,12 @@ let setsockopt : type a. socket -> a sockopt -> a -> unit = fun (Socket(socket,_
   | IntOpt (level, int_sockopt) -> nn_setsockopt_int socket level int_sockopt value
   | BoolOpt (level, int_sockopt) -> nn_setsockopt_int socket level int_sockopt (if value then 1 else 0)
 
-external nn_send : socket_id -> string -> unit = "ocaml_nanomsg_send"
+external nn_send : socket_id -> payload -> unit = "ocaml_nanomsg_send"
 let send (Socket(socket, _, send_fd)) msg = 
   let action () = nn_send socket msg in
   Lwt_unix.wrap_syscall Lwt_unix.Write send_fd action
 
-external nn_recv : socket_id -> string = "ocaml_nanomsg_recv"
+external nn_recv : socket_id -> payload = "ocaml_nanomsg_recv"
 let recv (Socket(socket, recv_fd, _)) =
   let action () = nn_recv socket in
   Lwt_unix.wrap_syscall Lwt_unix.Read recv_fd action
@@ -122,3 +123,6 @@ external term : unit -> unit = "ocaml_nanomsg_term"
 
 let subscribe (Socket(socket,_,_)) prefix = nn_setsockopt_str socket NN_SUB NN_SUB_SUBSCRIBE prefix
 let unsubscribe (Socket(socket,_,_)) prefix = nn_setsockopt_str socket NN_SUB NN_SUB_UNSUBSCRIBE prefix
+
+external payload_of_string: string -> payload = "ocaml_payload_of_string"
+external string_of_payload: payload -> string = "ocaml_string_of_payload"

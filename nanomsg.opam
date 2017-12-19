@@ -10,8 +10,10 @@ license: "MIT"
 build: [ ["jbuilder" "build" "-p" "nanomsg" "." "-j" jobs "@install"] ]
 build-test: [ "jbuilder" "runtest" "-p" name ]
 depends: [
-  "jbuilder" {build}
   "lwt"
+  "jbuilder" {build}
+  "oUnit" {test}
+  "bigstring" {test}
 ]
 depexts: [
 ]
