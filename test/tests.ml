@@ -79,6 +79,33 @@ let test_recv_over_send_only =
   in
   test_lwt_fail name exn test
 
+let test_garbage_collection =
+  let name = "garbage collection" in
+  let test () =
+    let channel = "ipc:///tmp/pair-pair" in
+    let message = Bytes.create 1000 in
+    let producer = Nanomsg.socket Nanomsg.Pair in
+    let consumer = Nanomsg.socket Nanomsg.Pair in
+    let _ = Nanomsg.bind producer channel in
+    let _ = Nanomsg.connect consumer channel in
+    let rec loop n =
+      if n = 0 then Lwt.return_unit
+      else if n mod 10 = 0 then (
+        Gc.compact ();
+        loop (n-1)
+      ) else (
+        Nanomsg.send producer (Nanomsg.payload_of_string message)
+        >>= fun () ->
+        Nanomsg.recv consumer
+        >>= fun payload ->
+        assert_equal message (Nanomsg.string_of_payload payload);
+        loop (n-1)
+      )
+    in
+    loop 1000
+  in
+  test_lwt name test
+
 let test_bad_protocol =
   let name = "connecting PUSH PAIR" in
   let exn = Unix.Unix_error (Unix.EINVAL, "Nanomsg.recv", "send-only socket") in
@@ -104,6 +131,7 @@ let suite = "tests">:::[
   test_recv_over_send_only;
   test_inverse "payload_of_string" Nanomsg.payload_of_string "payload" Bigstring.to_string;
   test_apply "string_of_payload" Nanomsg.string_of_payload (Bigstring.of_string "payload") "payload";
+  test_garbage_collection;
   (* test_bad_protocol; *)
 ]
 
