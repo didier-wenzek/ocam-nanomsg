@@ -14,7 +14,6 @@ type socket = Socket of socket_id * Lwt_unix.file_descr * Lwt_unix.file_descr
 type address = string
 type endpoint_id = int
 type endpoint = Endpoint of socket_id * endpoint_id
-type payload = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
 
 type domain = AF_SP | AF_SP_RAW
 type protocol = Pair | Pub | Sub | Req | Rep | Push | Pull | Surveyor | Respondent | Bus
@@ -46,7 +45,10 @@ module Payload = struct
   type recv
 
   (** Opaque message allocated by nanomsg. *)
-  type msg
+  type nanomsg
+
+  (** Big string wrapped around an opaque message. *)
+  type buffer = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
 
   (** Message payload.
 
@@ -59,19 +61,37 @@ module Payload = struct
       From reception side, the payload of a received message is wrapped into a pair
       made of the message length and a custom block handling the opaque msg. *)
   type 'mode t =
-    | NanoMsg: int * msg -> recv t
+    | NanoMsg: int * nanomsg -> recv t
     | String: string -> send t
-    | Value: (payload -> 'a -> unit) * 'a -> send t
+    | Value: ('a -> int) * (buffer -> 'a -> unit) * 'a -> send t
 
-  external msg_of_string: string -> msg = "ocaml_nanomsg_msg_of_string"
-  external msg_to_string: int -> msg -> string = "ocaml_nanomsg_string_of_msg"
+  external msg_of_string: string -> nanomsg = "ocaml_nanomsg_msg_of_string"
+  external msg_to_string: int -> nanomsg -> string = "ocaml_nanomsg_string_of_msg"
+  external create_msg: int -> nanomsg = "ocaml_create_msg"
+  external buffer_of_msg: int -> nanomsg -> buffer = "ocaml_buffer_of_msg"
 
   let of_string s = String s
-  let of_value writer x = Value (writer,x)
 
   let to_string = function
     | NanoMsg (len, msg) -> msg_to_string len msg
 
+  let of_value ~sizer ~writer x = Value (sizer,writer,x)
+
+  let to_value ~reader = function
+    | NanoMsg (len, msg) ->
+      let buffer = buffer_of_msg len msg in
+      reader buffer
+
+  let to_nanomsg = function
+    | String s -> msg_of_string s
+    | Value (sizer,writer,x) ->
+      let len = sizer x in
+      let msg = create_msg len in
+      let buffer = buffer_of_msg len msg in
+      let () = writer buffer x in
+      msg
+
+  let of_nanomsg (len,msg) = NanoMsg (len,msg)
 end
 
 let linger = IntOpt (NN_SOL_SOCKET, NN_LINGER)
@@ -141,14 +161,14 @@ let setsockopt : type a. socket -> a sockopt -> a -> unit = fun (Socket(socket,_
   | IntOpt (level, int_sockopt) -> nn_setsockopt_int socket level int_sockopt value
   | BoolOpt (level, int_sockopt) -> nn_setsockopt_int socket level int_sockopt (if value then 1 else 0)
 
-external nn_send : socket_id -> payload -> unit = "ocaml_nanomsg_send"
+external nn_send : socket_id -> Payload.nanomsg -> unit = "ocaml_nanomsg_send"
 let send (Socket(socket, _, send_fd)) msg = 
-  let action () = nn_send socket msg in
+  let action () = nn_send socket (Payload.to_nanomsg msg) in
   Lwt_unix.wrap_syscall Lwt_unix.Write send_fd action
 
-external nn_recv : socket_id -> payload = "ocaml_nanomsg_recv"
+external nn_recv : socket_id -> int*Payload.nanomsg = "ocaml_nanomsg_recv"
 let recv (Socket(socket, recv_fd, _)) =
-  let action () = nn_recv socket in
+  let action () = (Payload.of_nanomsg (nn_recv socket)) in
   Lwt_unix.wrap_syscall Lwt_unix.Read recv_fd action
 
 external nn_close_job : socket_id -> unit Lwt_unix.job = "ocaml_nanomsg_close_job"
@@ -159,6 +179,3 @@ external term : unit -> unit = "ocaml_nanomsg_term"
 
 let subscribe (Socket(socket,_,_)) prefix = nn_setsockopt_str socket NN_SUB NN_SUB_SUBSCRIBE prefix
 let unsubscribe (Socket(socket,_,_)) prefix = nn_setsockopt_str socket NN_SUB NN_SUB_UNSUBSCRIBE prefix
-
-external payload_of_string: string -> payload = "ocaml_payload_of_string"
-external string_of_payload: payload -> string = "ocaml_string_of_payload"

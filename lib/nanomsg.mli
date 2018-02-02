@@ -13,9 +13,6 @@ type address = string
 (** The type of a binding of a socket with some local or remote addresse. *)
 type endpoint
 
-(** String type based on Bigarray *)
-type payload = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
-
 (** A value of type ['a sockopt] names an option with value of type ['a]. *)
 type 'a sockopt
 
@@ -29,11 +26,20 @@ module Payload : sig
   (** A message payload, sent or received over a socket. *)
   type 'mode t
 
-  (** Copy the string into a message to be sent. *)
+  (** Buffer type based on Bigarray *)
+  type buffer = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
+
+  (** Make a message of a value. *)
   val of_string: string -> send t
 
   (** Extract the content of a received message. *)
   val to_string: recv t -> string
+
+  (** Encode a value in a message to be sent. *)
+  val of_value: sizer:('a -> int) -> writer:(buffer -> 'a -> unit) -> 'a -> send t
+
+  (** Decode a value of a received message. *)
+  val to_value: reader:(buffer -> 'a) -> recv t -> 'a
 end
 
 (** Creates a socket with a specified domain and protocol
@@ -79,10 +85,10 @@ val setsockopt : socket -> 'a sockopt -> 'a -> unit
    the size of the send buffer (sndbuf option) must be large enough
    to contain the message otherwise the operation blocks !
 *)
-val send : socket -> payload -> unit Lwt.t
+val send : socket -> Payload.send Payload.t -> unit Lwt.t
 
 (** Receives a message from the socket. *)
-val recv : socket -> payload Lwt.t
+val recv : socket -> Payload.recv Payload.t Lwt.t
 
 (** Removes an endpoint from a socket.
 
@@ -107,9 +113,3 @@ val subscribe : socket -> string -> unit
 
 (** Unsubcribes the socket to messages published with the given prefix. *)
 val unsubscribe : socket -> string -> unit
-
-(** Make a bigstring payload of a string. *)
-val payload_of_string: string -> payload
-
-(** Make a string of a bigstring payload. *)
-val string_of_payload: payload -> string

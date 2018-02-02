@@ -1,6 +1,8 @@
 open Lwt
 open OUnit2
 
+module Msg = Nanomsg.Payload
+
 let test_apply name f x y =
   let test test_ctxt =
     assert_equal y (f x)
@@ -28,13 +30,13 @@ let test_lwt_fail name exn f =
   name >:: test
 
 let send_msgs socket =
-  Lwt_list.iter_s (fun msg -> Nanomsg.send socket (Bigstring.of_string msg))
+  Lwt_list.iter_s (fun msg -> Nanomsg.send socket (Msg.of_string msg))
 
 let expect_msgs socket =
   let expect msg =
     Nanomsg.recv socket
     >>= fun actual_msg ->
-    assert_equal (Bigstring.to_string actual_msg) msg;
+    assert_equal (Msg.to_string actual_msg) msg;
     return ()
   in
   Lwt_list.iter_s expect
@@ -66,7 +68,7 @@ let test_send_over_recv_only =
   let exn = Unix.Unix_error (Unix.EINVAL, "Nanomsg.send", "receive-only socket") in
   let test () =
     let socket = Nanomsg.socket Nanomsg.Pull in
-    Nanomsg.send socket (Bigstring.of_string "msg")
+    Nanomsg.send socket (Msg.of_string "msg")
   in
   test_lwt_fail name exn test
 
@@ -94,11 +96,11 @@ let test_garbage_collection =
         Gc.compact ();
         loop (n-1)
       ) else (
-        Nanomsg.send producer (Nanomsg.payload_of_string message)
+        Nanomsg.send producer (Msg.of_string message)
         >>= fun () ->
         Nanomsg.recv consumer
         >>= fun payload ->
-        assert_equal message (Nanomsg.string_of_payload payload);
+        assert_equal message (Msg.to_string payload);
         loop (n-1)
       )
     in
@@ -115,7 +117,7 @@ let test_bad_protocol =
     let pair = Nanomsg.socket Nanomsg.Pair in
     let _ = Nanomsg.bind push channel in
     let _ = Nanomsg.connect pair channel in
-    Nanomsg.send push (Bigstring.of_string "msg")
+    Nanomsg.send push (Msg.of_string "msg")
     >>= fun () ->
     Nanomsg.recv pair
   in
@@ -129,8 +131,6 @@ let suite = "tests">:::[
   test_push_pull "tcp://127.0.0.1:5555" message_samples;
   test_send_over_recv_only;
   test_recv_over_send_only;
-  test_inverse "payload_of_string" Nanomsg.payload_of_string "payload" Bigstring.to_string;
-  test_apply "string_of_payload" Nanomsg.string_of_payload (Bigstring.of_string "payload") "payload";
   test_garbage_collection;
   (* test_bad_protocol; *)
 ]
