@@ -5,6 +5,7 @@
 #include <caml/fail.h>
 #include <caml/alloc.h>
 #include <caml/bigarray.h>
+#include <caml/custom.h>
 #include <lwt_unix.h>
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
@@ -14,6 +15,10 @@
 #include <nanomsg/survey.h>
 #include <nanomsg/bus.h>
 #include <nanomsg/tcp.h>
+
+/* --------------------------------------- */
+/* Enums                                   */
+/* --------------------------------------- */
 
 /* Must be synchronized with Nanomsg.domain. */
 static int const DOMAIN[] = {
@@ -62,6 +67,36 @@ static int const LEVEL[] = {
   NN_SUB,
   NN_SURVEYOR
 };
+
+/* --------------------------------------- */
+/* Custom data wrappers                    */
+/* --------------------------------------- */
+
+#define Nano_msg_val(v) (*((void **) Data_custom_val(v)))
+
+static void nano_msg_custom_finalize(value v) {
+  nn_freemsg(Nano_msg_val(v));
+}
+
+static struct custom_operations nano_msg_operations = {
+  "nano_msg",
+  nano_msg_custom_finalize,
+  custom_compare_default,
+  custom_compare_ext_default,
+  custom_hash_default,
+  custom_serialize_default,
+  custom_deserialize_default
+};
+
+static value ocaml_val_of_msg (void* msg) {                                                                                                                                                      
+  value v = alloc_custom(&nano_msg_operations, sizeof(msg), 0, 1);
+  Nano_msg_val(v) = msg;
+  return v;
+}
+
+/* --------------------------------------- */
+/* Bindings                                */
+/* --------------------------------------- */
 
 extern CAMLprim
 value ocaml_nanomsg_socket(value caml_domain, value caml_protocol)
@@ -272,16 +307,21 @@ value ocaml_nanomsg_recv(value caml_socket)
   if (len == -1) {
     unix_error(errno, "Nanomsg.recv", Nothing);
   } else {
-    // we must copy the buffer since nanomsg.nn_free is not equivalent to free.
+    // we must copy the buffer since nanomsg.nn_freemsg is not equivalent to free.
     long dims[1];
     dims[0] = len;
-    caml_msg = caml_ba_alloc(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, buf, dims);
+    void *str = malloc(len);
+    memcpy(str, buf, len);
+    caml_msg = caml_ba_alloc(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, str, dims);
 
+    nn_freemsg(buf);
     CAMLreturn(caml_msg);
   }
 }
 
-#include <stdio.h>
+/* --------------------------------------- */
+/* Message payload                         */
+/* --------------------------------------- */
 
 extern CAMLprim
 value ocaml_payload_of_string(value caml_str)
@@ -311,6 +351,40 @@ value ocaml_string_of_payload(value caml_bigstr)
 
   caml_str = caml_alloc_string(len);
   memcpy(String_val(caml_str), str, len);
+
+  CAMLreturn(caml_str);
+}
+
+extern CAMLprim
+value ocaml_nanomsg_msg_of_string(value caml_str)
+{
+  CAMLparam1(caml_str);
+  CAMLlocal1(caml_msg);
+
+  size_t len = caml_string_length(caml_str);
+  void *msg = nn_allocmsg (len, 0);
+
+  if (msg == NULL) {
+    unix_error(errno, "Nanomsg.Payload.of_string", Nothing);
+  } else {
+    memcpy(msg, String_val(caml_str), len);
+    caml_msg = ocaml_val_of_msg(msg);
+
+    CAMLreturn(caml_msg);
+  }
+}
+
+extern CAMLprim
+value ocaml_nanomsg_string_of_msg(value caml_len, value caml_msg)
+{
+  CAMLparam2(caml_len, caml_msg);
+  CAMLlocal1(caml_str);
+
+  size_t len = Int_val(caml_len);
+  void* msg = Nano_msg_val(caml_msg);
+
+  caml_str = caml_alloc_string(len);
+  memcpy(String_val(caml_str), msg, len);
 
   CAMLreturn(caml_str);
 }

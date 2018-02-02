@@ -38,6 +38,42 @@ type _ sockopt =
   | IntOpt : nn_level * nn_sockopt -> int sockopt
   | BoolOpt : nn_level * nn_sockopt -> bool sockopt
 
+module Payload = struct
+  (** Phantom tag aimed to tag the messages to be sent. *)
+  type send
+
+  (** Phantom tag aimed to tag the received messages. *)
+  type recv
+
+  (** Opaque message allocated by nanomsg. *)
+  type msg
+
+  (** Message payload.
+
+      The message type is tagged with a mode (either send or recv),
+      to deal with the fact that the ownership of messages differs between emission and reception:
+      * When a message is sent, nanomsg takes the ownership and will free the payload.
+      * When a message is received, the application is responsible to free the message.
+
+      So, the actual payload of a message to be sent will be created each time the message is sent.
+      From reception side, the payload of a received message is wrapped into a pair
+      made of the message length and a custom block handling the opaque msg. *)
+  type 'mode t =
+    | NanoMsg: int * msg -> recv t
+    | String: string -> send t
+    | Value: (payload -> 'a -> unit) * 'a -> send t
+
+  external msg_of_string: string -> msg = "ocaml_nanomsg_msg_of_string"
+  external msg_to_string: int -> msg -> string = "ocaml_nanomsg_string_of_msg"
+
+  let of_string s = String s
+  let of_value writer x = Value (writer,x)
+
+  let to_string = function
+    | NanoMsg (len, msg) -> msg_to_string len msg
+
+end
+
 let linger = IntOpt (NN_SOL_SOCKET, NN_LINGER)
 let sndbuf = IntOpt (NN_SOL_SOCKET, NN_SNDBUF)
 let rcvbuf = IntOpt (NN_SOL_SOCKET, NN_RCVBUF)

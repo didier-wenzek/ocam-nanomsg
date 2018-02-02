@@ -19,7 +19,24 @@ type payload = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Ar
 (** A value of type ['a sockopt] names an option with value of type ['a]. *)
 type 'a sockopt
 
-(** Creates a socket with specified domain and protocol
+module Payload : sig
+  (** Send mode *)
+  type send
+
+  (** Reception mode *)
+  type recv
+
+  (** A message payload, sent or received over a socket. *)
+  type 'mode t
+
+  (** Copy the string into a message to be sent. *)
+  val of_string: string -> send t
+
+  (** Extract the content of a received message. *)
+  val to_string: recv t -> string
+end
+
+(** Creates a socket with a specified domain and protocol
 
     The default domain is AF_SP.
 *)
