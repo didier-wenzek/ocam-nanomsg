@@ -7,7 +7,10 @@ type domain = AF_SP | AF_SP_RAW
 (** The type of protocols which define the behavior of a socket *)
 type protocol = Pair | Pub | Sub | Req | Rep | Push | Pull | Surveyor | Respondent | Bus
 
+(** The type of a socket address: a string made of two parts ["transport://address"] *)
 type address = string
+
+(** The type of a binding of a socket with some local or remote addresse. *)
 type endpoint
 
 (** String type based on Bigarray *)
@@ -34,7 +37,7 @@ val connect : socket -> address -> endpoint
   all send/recv operations are performed in non-blocking mode and use the NN_DONTWAIT flag.
 
   No send/recv fd is provided:
-  there are used internally to signal send/recv event to Lwt.
+  the socket file descriptor is used internally to signal send/recv events to Lwt.
 *)
 val linger : int sockopt
 val sndbuf : int sockopt
@@ -91,5 +94,5 @@ val unsubscribe : socket -> string -> unit
 (** Make a bigstring payload of a string. *)
 val payload_of_string: string -> payload
 
-(** Make a strinf of a bigstring payload. *)
+(** Make a string of a bigstring payload. *)
 val string_of_payload: payload -> string
