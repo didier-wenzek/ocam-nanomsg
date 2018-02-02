@@ -17,29 +17,26 @@ type endpoint
 type 'a sockopt
 
 module Payload : sig
-  (** Send mode *)
+  (** Message to be sent. *)
   type send
 
-  (** Reception mode *)
+  (** Received message. *)
   type recv
-
-  (** A message payload, sent or received over a socket. *)
-  type 'mode t
 
   (** Buffer type based on Bigarray *)
   type buffer = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
 
   (** Make a message of a value. *)
-  val of_string: string -> send t
+  val of_string: string -> send
 
   (** Extract the content of a received message. *)
-  val to_string: recv t -> string
+  val to_string: recv -> string
 
   (** Encode a value in a message to be sent. *)
-  val of_value: sizer:('a -> int) -> writer:(buffer -> 'a -> unit) -> 'a -> send t
+  val of_value: sizer:('a -> int) -> writer:(buffer -> 'a -> unit) -> 'a -> send
 
   (** Decode a value of a received message. *)
-  val to_value: reader:(buffer -> 'a) -> recv t -> 'a
+  val to_value: reader:(buffer -> 'a) -> recv -> 'a
 end
 
 (** Creates a socket with a specified domain and protocol
@@ -85,10 +82,10 @@ val setsockopt : socket -> 'a sockopt -> 'a -> unit
    the size of the send buffer (sndbuf option) must be large enough
    to contain the message otherwise the operation blocks !
 *)
-val send : socket -> Payload.send Payload.t -> unit Lwt.t
+val send : socket -> Payload.send -> unit Lwt.t
 
 (** Receives a message from the socket. *)
-val recv : socket -> Payload.recv Payload.t Lwt.t
+val recv : socket -> Payload.recv Lwt.t
 
 (** Removes an endpoint from a socket.
 
