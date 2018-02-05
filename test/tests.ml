@@ -123,6 +123,28 @@ let test_bad_protocol =
   in
   test_lwt_fail name exn test
 
+let test_bind_twice =
+  let name = "bind twice" in
+  let exn = Unix.Unix_error(Unix.EADDRINUSE, "Nanomsg.bind", "inproc://queue") in
+  let test () =
+    let socket1 = Nanomsg.socket Nanomsg.Push in
+    let socket2 = Nanomsg.socket Nanomsg.Push in
+    let _ = Nanomsg.bind socket1 "inproc://queue" in
+    let _ = Nanomsg.bind socket2 "inproc://queue" in
+    Lwt.return_unit
+  in
+  test_lwt_fail name exn test
+
+let test_bad_url =
+  let name = "bad url" in
+  let exn = Unix.Unix_error(Unix.EPROTONOSUPPORT, "Nanomsg.connect", "udp://queue") in
+  let test () =
+    let socket = Nanomsg.socket Nanomsg.Push in
+    let _ = Nanomsg.connect socket "udp://queue" in
+    Lwt.return_unit
+  in
+  test_lwt_fail name exn test
+
 let message_samples = ["foo"; "bar"; "xoxox"]
 
 let suite = "tests">:::[
@@ -132,6 +154,8 @@ let suite = "tests">:::[
   test_send_over_recv_only;
   test_recv_over_send_only;
   test_garbage_collection;
+  test_bind_twice;
+  test_bad_url;
   (* test_bad_protocol; => block the tests :-( *)
 ]
 

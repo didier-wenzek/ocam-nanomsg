@@ -190,7 +190,7 @@ value ocaml_nanomsg_bind(value caml_socket, value caml_address)
   int endpoint = nn_bind(socket, address);
 
   if (endpoint == -1) {
-    unix_error(errno, "Nanomsg.bind", Nothing);
+    unix_error(errno, "Nanomsg.bind", caml_address);
   } else {
     caml_endpoint = Val_int(endpoint);
     CAMLreturn(caml_endpoint);
@@ -208,7 +208,7 @@ value ocaml_nanomsg_connect(value caml_socket, value caml_address)
   int endpoint = nn_connect(socket, address);
 
   if (endpoint == -1) {
-    unix_error(errno, "Nanomsg.connect", Nothing);
+    unix_error(errno, "Nanomsg.connect", caml_address);
   } else {
     caml_endpoint = Val_int(endpoint);
     CAMLreturn(caml_endpoint);
