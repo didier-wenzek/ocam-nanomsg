@@ -126,13 +126,13 @@ let test_bad_protocol =
 let message_samples = ["foo"; "bar"; "xoxox"]
 
 let suite = "tests">:::[
-  test_push_pull "ipc:///tmp/foo" message_samples;
-  test_push_pull "inproc://foo" message_samples;
+  test_push_pull "ipc:///tmp/foo.test" message_samples;
+  test_push_pull "inproc://foo.test" message_samples;
   test_push_pull "tcp://127.0.0.1:5555" message_samples;
   test_send_over_recv_only;
   test_recv_over_send_only;
   test_garbage_collection;
-  (* test_bad_protocol; *)
+  (* test_bad_protocol; => block the tests :-( *)
 ]
 
 let main () =

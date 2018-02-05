@@ -16,6 +16,8 @@
 #include <nanomsg/bus.h>
 #include <nanomsg/tcp.h>
 
+#include <stdio.h>
+
 /* --------------------------------------- */
 /* Enums                                   */
 /* --------------------------------------- */
@@ -72,6 +74,7 @@ static int const LEVEL[] = {
 /* Custom data wrappers                    */
 /* --------------------------------------- */
 
+#define Nano_msg_ptr(v) (Data_custom_val(v))
 #define Nano_msg_val(v) (*((void **) Data_custom_val(v)))
 
 static void nano_msg_custom_finalize(value v) {
@@ -245,8 +248,6 @@ struct job_close {
   int error;
 };
 
-#include <stdio.h>
-
 static void worker_close(struct job_close* job)
 {
   if (nn_close(job->socket)) job->error = errno;
@@ -283,14 +284,17 @@ value ocaml_nanomsg_send(value caml_socket, value caml_msg)
   CAMLparam2(caml_socket, caml_msg);
 
   int socket = Int_val(caml_socket);
-  void* buf = Nano_msg_val(caml_msg);
 
-  int sent = nn_send(socket, buf, NN_MSG, NN_DONTWAIT);
+  // WARNING: when using preallocated buffers (as marked by the NN_MSG parameter),
+  // nanomsg expects the address of a pointer to the buffer (void **)
+  // and NOT the buffer itself !
+  void* msg = Nano_msg_ptr(caml_msg);
+  int sent = nn_send(socket, msg, NN_MSG, NN_DONTWAIT);
   
   if (sent == -1) {
     unix_error(errno, "Nanomsg.send", Nothing);
   } else {
-    buf = NULL; /* the message is released on successful call of nn_send */
+    Nano_msg_val(caml_msg) = NULL; /* the message is released on successful call of nn_send */
     CAMLreturn(Val_unit);
   }
 }
@@ -332,7 +336,7 @@ value ocaml_create_msg(value caml_len)
   void *msg = nn_allocmsg (len, 0);
 
   if (msg == NULL) {
-    unix_error(errno, "Nanomsg.Payload.of_string", Nothing);
+    unix_error(errno, "Nanomsg.Payload.create_msg", Nothing);
   } else {
     caml_msg = ocaml_val_of_msg(msg);
 
