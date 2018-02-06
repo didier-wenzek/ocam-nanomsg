@@ -76,11 +76,11 @@ val setsockopt : socket -> 'a sockopt -> 'a -> unit
 
 (** Sends a message to the socket.
 
-   Which of the peers the message will be sent to is determined by the particular socket type.
+    Which of the peers the message will be sent to is determined by the particular socket type.
 
-   (!) Warning,
-   the size of the send buffer (sndbuf option) must be large enough
-   to contain the message otherwise the operation blocks !
+    (!) WARNING,
+    the size of the send buffer (sndbuf option) must be large enough
+    to contain the message otherwise the operation blocks !
 *)
 val send : socket -> Payload.send -> unit Lwt.t
 
@@ -89,16 +89,16 @@ val recv : socket -> Payload.recv Lwt.t
 
 (** Removes an endpoint from a socket.
 
-  [shutdown ()] returns immediately, however,
-  the library will try to deliver any outstanding outbound messages to the endpoint
-  for the time specified by NN_LINGER socket option.
+    [shutdown endpoint] returns immediately, however,
+    the library will try to deliver any outstanding outbound messages to the endpoint
+    for the time specified by NN_LINGER socket option.
 *)
 val shutdown : endpoint -> unit
 
 (** Closes the socket.
  
-  Any buffered inbound messages that were not yet received by the application will be discarded.
-  The library will try to deliver any outstanding outbound messages for the time specified by NN_LINGER socket option.
+    Any buffered inbound messages that were not yet received by the application will be discarded.
+    The library will try to deliver any outstanding outbound messages for the time specified by NN_LINGER socket option.
 *)
 val close : socket -> unit Lwt.t
 
