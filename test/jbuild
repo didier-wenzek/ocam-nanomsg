@@ -2,7 +2,8 @@
 
 (executables
  ((names (tests))
-  (libraries (oUnit bigstring nanomsg))))
+  (preprocess (pps (ppx_bin_prot ppx_driver.runner)))
+  (libraries (oUnit bin_prot nanomsg))))
 
 (alias
  ((name    runtest)

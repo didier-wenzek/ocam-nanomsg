@@ -87,6 +87,22 @@ val send : socket -> Payload.send -> unit Lwt.t
 (** Receives a message from the socket. *)
 val recv : socket -> Payload.recv Lwt.t
 
+(** Sends a string to the socket. *)
+val send_string : socket -> string -> unit Lwt.t
+
+(** Receives a string from the socket. *)
+val recv_string : socket -> string Lwt.t
+
+(** Sends a value to the socket,
+
+    using the sizer and writer to wrap the value into a bigstring. *)
+val send_value: sizer:('a -> int) -> writer:(Payload.buffer -> 'a -> unit) -> socket -> 'a -> unit Lwt.t
+
+(** Receives a value from the socket,
+
+    using the reader to decode the bigstring into a value. *)
+val recv_value: reader:(Payload.buffer -> 'a) -> socket -> 'a Lwt.t
+
 (** Removes an endpoint from a socket.
 
     [shutdown endpoint] returns immediately, however,
