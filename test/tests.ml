@@ -4,25 +4,25 @@ open OUnit2
 module Msg = Nanomsg.Payload
 
 let test_apply name f x y =
-  let test test_ctxt =
+  let test _test_ctxt =
     assert_equal y (f x)
   in
   name >:: test
 
 let test_inverse name f x g =
-  let test test_ctxt =
+  let test _test_ctxt =
     assert_equal x (g (f x))
   in
   name >:: test
 
 let test_lwt name f =
-  let test test_ctxt =
+  let test _test_ctxt =
     Lwt_main.run (f ())
   in
   name >:: test
 
 let test_lwt_fail name exn f =
-  let test test_ctxt =
+  let test _test_ctxt =
     assert_raises exn (fun () ->
       Lwt_main.run (f ())
     )
@@ -85,7 +85,7 @@ let test_garbage_collection =
   let name = "garbage collection" in
   let test () =
     let channel = "ipc:///tmp/pair-pair" in
-    let message = Bytes.create 1000 in
+    let message = Bytes.create 1000 |> Bytes.to_string in
     let producer = Nanomsg.socket Nanomsg.Pair in
     let consumer = Nanomsg.socket Nanomsg.Pair in
     let _ = Nanomsg.bind producer channel in
@@ -164,4 +164,4 @@ let main () =
 
 let () =
   Lwt_engine.set (new Lwt_engine.libev ());
-  Lwt_unix.with_async_detach main
+  Lwt.with_value (Lwt.new_key ()) (Some Lwt_unix.Async_switch) main

@@ -1,0 +1,10 @@
+(executables
+ (names tests)
+ (libraries oUnit bigstring nanomsg))
+
+(alias
+ (name runtest)
+ (deps
+  (:< tests.exe))
+ (action
+  (run %{<})))

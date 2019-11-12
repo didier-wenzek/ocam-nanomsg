@@ -1,5 +1,3 @@
-open Lwt
-
 (* A socket is wrapped with its RECVFD and SNDFD file descriptors.
 
   RECVFD is readable when a message can be received from the socket.
@@ -47,7 +45,6 @@ module Payload = struct
 
   (** Big string wrapped around an opaque message. *)
   type buffer = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t 
-
 
   (** The actual payload of a message to be sent is created each time the message is sent. *)
   type send =
