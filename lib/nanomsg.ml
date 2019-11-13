@@ -164,3 +164,17 @@ external term : unit -> unit = "ocaml_nanomsg_term"
 
 let subscribe (Socket(socket,_,_)) prefix = nn_setsockopt_str socket NN_SUB NN_SUB_SUBSCRIBE prefix
 let unsubscribe (Socket(socket,_,_)) prefix = nn_setsockopt_str socket NN_SUB NN_SUB_UNSUBSCRIBE prefix
+
+let send_string socket s =
+  send socket (Payload.of_string s)
+
+let recv_string socket =
+  Lwt.map Payload.to_string (recv socket)
+  
+let send_value ~sizer ~writer =
+  let encode = Payload.of_value ~sizer ~writer in
+  fun socket value -> send socket (encode value)
+
+let recv_value ~reader =
+  let decode = Payload.to_value ~reader in
+  fun socket -> Lwt.map decode (recv socket)

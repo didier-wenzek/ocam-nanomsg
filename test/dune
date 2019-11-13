@@ -1,6 +1,7 @@
 (executables
  (names tests)
- (libraries oUnit bigstring nanomsg))
+ (preprocess (pps ppx_bin_prot))
+ (libraries oUnit nanomsg bin_prot))
 
 (alias
  (name runtest)
