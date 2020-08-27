@@ -210,4 +210,4 @@ let main () =
 
 let () =
   Lwt_engine.set (new Lwt_engine.libev ());
-  Lwt.with_value (Lwt.new_key ()) (Some Lwt_unix.Async_switch) main
+  Lwt.with_value (Lwt.new_key ()) (Some Lwt_unix.Async_detach) main
